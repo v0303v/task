@@ -1,28 +1,37 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\DTOs;
 
 class BuyerDTO
 {
-    public string $first_name;
-    public string $last_name;
+    public string $firstName;
+    public string $lastName;
     public int $age;
     public string $gender;
-    public string $phone_number;
+    public string $phoneNumber;
 
     public string $email;
     public string $tag;
-    public int $created_at;
+    public int $createdAt;
 
-    public function __construct($first_name, $last_name, $age, $gender, $phone_number, $email, $tag, $created_at)
+    public function __construct(string $firstName,
+                                string $lastName,
+                                int $age,
+                                string $gender,
+                                string $phoneNumber,
+                                string $email,
+                                string $tag,
+                                int $createdAt)
     {
-        $this->first_name = $first_name;
-        $this->last_name = $last_name;
+        $this->firstName = $firstName;
+        $this->lastName = $lastName;
         $this->age = $age;
         $this->gender = $gender;
-        $this->phone_number = $phone_number;
+        $this->phoneNumber = $phoneNumber;
         $this->email = $email;
         $this->tag = $tag;
-        $this->created_at = $created_at;
+        $this->createdAt = $createdAt;
     }
 }

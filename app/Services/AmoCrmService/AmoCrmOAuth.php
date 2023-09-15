@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Services\AmoCrmService;
@@ -13,19 +14,19 @@ use League\OAuth2\Client\Token\AccessToken;
 
 class AmoCrmOAuth
 {
-    private $client_id;
-    private $client_secret;
-    private $redirect_uri;
-    public $api_client;
+    private string $clientId;
+    private string $clientSecret;
+    private string $redirectUri;
+    public AmoCRMApiClient $apiClient;
 
     public function __construct()
     {
         $dotenv = new Dotenv();
         $dotenv->load(__DIR__ . '/.env');
-        $this->client_id = $_ENV['CLIENT_ID'];
-        $this->client_secret = $_ENV['CLIENT_SECRET'];
-        $this->redirect_uri = $_ENV['CLIENT_REDIRECT_URI'];
-        $this->api_client = new AmoCRMApiClient($this->client_id, $this->client_secret, $this->redirect_uri);
+        $this->clientId = $_ENV['CLIENT_ID'];
+        $this->clientSecret = $_ENV['CLIENT_SECRET'];
+        $this->redirectUri = $_ENV['CLIENT_REDIRECT_URI'];
+        $this->apiClient = new AmoCRMApiClient($this->clientId, $this->clientSecret, $this->redirectUri);
         $this->setAccess();
     }
 
@@ -33,7 +34,7 @@ class AmoCrmOAuth
     {
         $accessToken = $this->getToken();
 
-        $this->api_client->setAccessToken($accessToken)
+        $this->apiClient->setAccessToken($accessToken)
             ->setAccountBaseDomain($accessToken->getValues()['baseDomain'])
             ->onAccessTokenRefresh(
                 function (AccessTokenInterface $accessToken, string $baseDomain) {
@@ -53,13 +54,13 @@ class AmoCrmOAuth
     {
         session_start();
         if (isset($_GET['referer'])) {
-            $this->api_client->setAccountBaseDomain($_GET['referer']);
+            $this->apiClient->setAccountBaseDomain($_GET['referer']);
         }
         if (!isset($_GET['code'])) {
             $state = bin2hex(random_bytes(16));
             $_SESSION['oauth2state'] = $state;
 
-            $authorizationUrl = $this->api_client->getOAuthClient()->getAuthorizeUrl([
+            $authorizationUrl = $this->apiClient->getOAuthClient()->getAuthorizeUrl([
                 'state' => $state,
                 'mode' => 'post_message',
             ]);
@@ -74,14 +75,14 @@ class AmoCrmOAuth
         }
 
         try {
-            $accessToken = $this->api_client->getOAuthClient()->getAccessTokenByCode($_GET['code']);
+            $accessToken = $this->apiClient->getOAuthClient()->getAccessTokenByCode($_GET['code']);
 
             if (!$accessToken->hasExpired()) {
                 $this->saveToken([
                     'accessToken' => $accessToken->getToken(),
                     'refreshToken' => $accessToken->getRefreshToken(),
                     'expires' => $accessToken->getExpires(),
-                    'baseDomain' => $this->api_client->getAccountBaseDomain(),
+                    'baseDomain' => $this->apiClient->getAccountBaseDomain(),
                 ]);
             }
         } catch (Exception $e) {
@@ -91,7 +92,7 @@ class AmoCrmOAuth
 
     public function getToken()
     {
-        if (FALSE === file_exists(TOKEN_FILE)) {
+        if (false === file_exists(TOKEN_FILE)) {
             $this->authToApi();
         }
 

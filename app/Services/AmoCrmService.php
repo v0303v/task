@@ -14,38 +14,30 @@ use App\DTOs\BuyerDTO;
 
 class AmoCrmService extends AmoCrmOAuth
 {
-    public function run(BuyerDTO $buyerDto)
+    public function execute(BuyerDTO $buyerDto)
     {
         $responsibleUserId = (new AmoCrmUser())->getRandomUser();
 
         //Если контакт уже есть и существующая сделка в успешном статусе (142)
-        $successContactId = (new AmoCrmLead())->checkForDoubles($buyerDto->phone_number);
-        if (isset($successContactId) && 0 !== $successContactId) {
-            $lastCustomerId = (new AmoCrmCustomer())->createCustomer($buyerDto, $successContactId, $responsibleUserId);
-            (new AmoCrmProduct())->linkProductCustomer($lastCustomerId);
-            (new AmoCrmTask())->createTaskCustomer($buyerDto, $lastCustomerId, $responsibleUserId);
+        $successContact = (new AmoCrmLead())->checkForDoubles($buyerDto->phoneNumber);
+        if (isset($successContact) && null !== $successContact) {
+            $customer = (new AmoCrmCustomer())->createCustomer($buyerDto, $successContact, $responsibleUserId);
+            (new AmoCrmProduct())->linkProductCustomer($customer);
 
             return json_encode([
                 'success' => 'Контакт уже существует, сделка в успешном статусе, будет создан покупатель'
             ], JSON_UNESCAPED_UNICODE);
         }
 
-        // есть ли контакт уже есть в аккаунте
-        $contactId = (new AmoCrmContact())->ifExistsContact($buyerDto->phone_number);
-        if (isset($contactId) && 0 !== $contactId) {
-            $lastLead = (new AmoCrmLead())->createLead($buyerDto, $contactId, $responsibleUserId);
-            (new AmoCrmTask)->createTaskLead($buyerDto, $lastLead, $responsibleUserId);
-            (new AmoCrmProduct())->linkProductLead($lastLead);
-
+        // есть ли контакт уже есть в аккаунте, не в статусе "Успешно реализована"
+        if (true === is_null($successContact)){
             return json_encode([
-                'success' => 'Контакт уже существует, создана новая сделка по этому контакту'
+                'success' => 'Контакт уже существует, Cделка по этому контакту еще не реализована'
             ], JSON_UNESCAPED_UNICODE);
         }
 
-        $lastContactId = (new AmoCrmContact())->createContact($buyerDto);
-        (new AmoCrmContact())->addGender($buyerDto->gender, $lastContactId);
-        (new AmoCrmContact())->addAge($buyerDto->age, $lastContactId);
-        $lastLead = (new AmoCrmLead())->createLead($buyerDto, $lastContactId, $responsibleUserId);
+        $contact = (new AmoCrmContact())->createContact($buyerDto);
+        $lastLead = (new AmoCrmLead())->createLead($buyerDto, $responsibleUserId, $contact);
         (new AmoCrmTask)->createTaskLead($buyerDto, $lastLead, $responsibleUserId);
         (new AmoCrmProduct())->linkProductLead($lastLead);
 

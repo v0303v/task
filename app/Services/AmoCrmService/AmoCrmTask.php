@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Services\AmoCrmService;
@@ -6,26 +7,28 @@ namespace App\Services\AmoCrmService;
 use AmoCRM\Collections\TasksCollection;
 use AmoCRM\Exceptions\AmoCRMApiException;
 use AmoCRM\Helpers\EntityTypesInterface;
+use AmoCRM\Models\LeadModel;
 use AmoCRM\Models\TaskModel;
 use App\DTOs\BuyerDTO;
+use DateTime;
 
 class AmoCrmTask extends AmoCrmOAuth
 {
-    public function createTaskLead(BuyerDTO $buyerDTO, int $idLead, int $responsibleUserId)
+    public function createTaskLead(BuyerDTO $buyerDTO, LeadModel $leadModel, int $responsibleUserId): void
     {
         $duration = 4 * 24 * 60 * 60;
         $tasksCollection = new TasksCollection();
         $task = new TaskModel();
-        $task->setText('Задача на сделку №' . $idLead)
-            ->setCompleteTill((new AmoCrmLead())->checkWorkingHours($buyerDTO->created_at))
+        $task->setText('Задача на сделку №' . $leadModel->getId())
+            ->setCompleteTill($this->checkWorkingHours($buyerDTO->createdAt))
             ->setEntityType(EntityTypesInterface::LEADS)
-            ->setEntityId($idLead)
+            ->setEntityId($leadModel->getId())
             ->setDuration($duration)
             ->setResponsibleUserId($responsibleUserId);
         $tasksCollection->add($task);
 
         try {
-            $tasksService = $this->api_client->tasks();
+            $tasksService = $this->apiClient->tasks();
             $tasksCollection = $tasksService->add($tasksCollection);
         } catch (AmoCRMApiException $e) {
             print_r($e);
@@ -33,25 +36,59 @@ class AmoCrmTask extends AmoCrmOAuth
         }
     }
 
-    public function createTaskCustomer(BuyerDTO $buyerDTO, int $idCustomer, int $responsibleUserId)
+    public function checkWorkingHours(int $createdAt): int
     {
-        $duration = 4 * 24 * 60 * 60;
-        $tasksCollection = new TasksCollection();
-        $task = new TaskModel();
-        $task->setText('Задача на сделку с покупателем №' . $idCustomer)
-            ->setCompleteTill((new AmoCrmLead())->checkWorkingHours($buyerDTO->created_at))
-            ->setEntityType(EntityTypesInterface::CUSTOMERS)
-            ->setEntityId($idCustomer)
-            ->setDuration($duration)
-            ->setResponsibleUserId($responsibleUserId);
-        $tasksCollection->add($task);
+        $dateTime = new DateTime();
+        $newCreatedAt = $dateTime->setTimestamp($createdAt)->modify('+4 days')->getTimestamp();
+        $dayOfWeek = $dateTime->setTimestamp($newCreatedAt)->format('l');
+        $timeOfDay = $dateTime->setTimestamp($newCreatedAt)->format('H');
 
-        try {
-            $tasksService = $this->api_client->tasks();
-            $tasksCollection = $tasksService->add($tasksCollection);
-        } catch (AmoCRMApiException $e) {
-            print_r($e);
-            die;
+        if ('Sunday' == $dayOfWeek) {
+
+            if (false === in_array($timeOfDay, range(9, 18))) {
+
+                if (9 < $timeOfDay) {
+                    $dateTime->setTimestamp($newCreatedAt)
+                        ->modify('+ 1 day')
+                        ->modify(' +' . (10 - $timeOfDay) . ' hours')
+                        ->getTimestamp();
+                }
+
+                if (18 > $timeOfDay) {
+                    $dateTime->setTimestamp($newCreatedAt)
+                        ->modify('+ 1 day')
+                        ->modify(' - ' . ($timeOfDay - 19) . ' hours')
+                        ->getTimestamp();
+                }
+
+            }
+
+            return $dateTime->setTimestamp($newCreatedAt)->modify('+ 1 day')->getTimestamp();
         }
+
+        if ('Saturday' == $dayOfWeek) {
+
+            if (false === in_array($timeOfDay, range(9, 18))) {
+
+                if (9 < $timeOfDay) {
+                    $dateTime->setTimestamp($newCreatedAt)
+                        ->modify('+ 2 day')
+                        ->modify(' - ' . (10 - $timeOfDay) . ' hours')
+                        ->getTimestamp();
+                }
+
+                if (18 > $timeOfDay) {
+                    $dateTime->setTimestamp($newCreatedAt)
+                        ->modify('+2 day')
+                        ->modify(' - ' . ($timeOfDay - 19) . ' hours')
+                        ->getTimestamp();
+                }
+
+            }
+
+            return $dateTime->setTimestamp($newCreatedAt)->modify('+ 2 days')->getTimestamp();
+        }
+
+        return $newCreatedAt;
     }
 }

@@ -37,14 +37,14 @@ class Handler extends Controller
         $buyerDto = new BuyerDTO(
             $this->_buyer['first_name'],
             $this->_buyer['last_name'],
-            $this->_buyer['age'],
+            (int)$this->_buyer['age'],
             $this->_buyer['gender'],
-            $this->_buyer['phone_number'],
+            (string)$this->_buyer['phone_number'],
             $this->_buyer['email'],
             (new DateTime())->setTimestamp(time())->format('d.m.Y'),
             (new DateTime())->getTimestamp()
         );
 
-        return (new AmoCrmService())->run($buyerDto);
+        return (new AmoCrmService())->execute($buyerDto);
     }
 }

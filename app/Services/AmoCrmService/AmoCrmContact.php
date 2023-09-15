@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Services\AmoCrmService;
@@ -21,11 +22,11 @@ use App\DTOs\BuyerDTO;
 
 class AmoCrmContact extends AmoCrmOAuth
 {
-    public function createContact(BuyerDTO $buyerDTO)
+    public function createContact(BuyerDTO $buyerDTO): ?ContactModel
     {
         $contact = new ContactModel();
-        $contact->setFirstName($buyerDTO->first_name)
-            ->setLastName($buyerDTO->last_name)
+        $contact->setFirstName($buyerDTO->firstName)
+            ->setLastName($buyerDTO->lastName)
             ->setIsMain(true)
             ->setCustomFieldsValues(
                 (new CustomFieldsValuesCollection())
@@ -47,14 +48,35 @@ class AmoCrmContact extends AmoCrmOAuth
                                 (new MultitextCustomFieldValueCollection())
                                     ->add(
                                         (new MultitextCustomFieldValueModel())
-                                            ->setValue($buyerDTO->phone_number)
+                                            ->setValue($buyerDTO->phoneNumber)
+                                    )
+                            )
+                    )
+                    ->add(
+                        (new TextCustomFieldValuesModel())
+                            ->setFieldId(2235077)
+                            ->setValues(
+                                (new TextCustomFieldValueCollection())
+                                    ->add(
+                                        (new TextCustomFieldValueModel())
+                                            ->setValue($buyerDTO->gender)
+                                    )
+                            )
+                    )
+                    ->add(
+                        (new NumericCustomFieldValuesModel())
+                            ->setFieldId(2235027)
+                            ->setValues(
+                                (new NumericCustomFieldValueCollection())
+                                    ->add(
+                                        (new NumericCustomFieldValueModel())
+                                            ->setValue($buyerDTO->age)
                                     )
                             )
                     )
             );
         try {
-            $contactModel = $this->api_client->contacts()->addOne($contact);
-            return $contactModel->getId();
+            return $this->apiClient->contacts()->addOne($contact);
         } catch (AmoCRMApiException $e) {
             print_r($e);
             die;
@@ -64,7 +86,7 @@ class AmoCrmContact extends AmoCrmOAuth
     public function getOneContact(int $idContact): ?ContactModel
     {
         try {
-            return $this->api_client->contacts()->getOne($idContact);
+            return $this->apiClient->contacts()->getOne($idContact);
         } catch (AmoCRMMissedTokenException $e) {
             print_r($e);
             die;
@@ -74,89 +96,6 @@ class AmoCrmContact extends AmoCrmOAuth
 
     public function getContacts(): ?ContactsCollection
     {
-        return $this->api_client->contacts()->get();
-    }
-
-    public function addGender(string $gender, int $idContact)
-    {
-        $contact = $this->getOneContact($idContact);
-        $customFields = $contact->getCustomFieldsValues();
-        $genderField = $customFields->getBy('fieldId', 2235077);
-        if (empty($genderField)) {
-            $genderField = (new TextCustomFieldValuesModel())
-                ->setFieldId(2235077);
-            $customFields->add($genderField);
-        }
-
-        $genderField->setValues(
-            (new TextCustomFieldValueCollection())
-                ->add((new TextCustomFieldValueModel())
-                    ->setValue($gender))
-        );
-
-        try {
-            $this->api_client->contacts()->updateOne($contact);
-        } catch (AmoCRMApiException $e) {
-            print_r($e);
-            die;
-        }
-    }
-
-    public function addAge(int $age, int $idContact)
-    {
-        $contact = $this->getOneContact($idContact);
-        $customFields = $contact->getCustomFieldsValues();
-        $genderField = $customFields->getBy('fieldId', 2235027);
-
-        if (empty($genderField)) {
-            $genderField = (new NumericCustomFieldValuesModel())
-                ->setFieldId(2235027);
-            $customFields->add($genderField);
-        }
-
-        $genderField->setValues(
-            (new NumericCustomFieldValueCollection())
-                ->add((new NumericCustomFieldValueModel())
-                    ->setValue($age))
-        );
-
-        try {
-            $this->api_client->contacts()->updateOne($contact);
-        } catch (AmoCRMApiException $e) {
-            print_r($e);
-            die;
-        }
-    }
-
-    private function getAllContactsPhones()
-    {
-        $phoneNumbers = [];
-        $contactIds = [];
-        try {
-            $contacts = $this->api_client->contacts()->get();
-        } catch (AmoCRMMissedTokenException $e) {
-            print_r($e);
-            die;
-        }
-
-        foreach ($contacts as $contact) {
-            $phoneNumbers[] = $contact->getCustomFieldsValues()->getBy('fieldCode', 'PHONE')->getValues()[0]->value;
-            $contactIds[] = $contact->getId();
-        }
-
-        return array_combine($contactIds, $phoneNumbers);
-    }
-
-    public function ifExistsContact(string $phoneNumber)
-    {
-        $contactsPhones = $this->getAllContactsPhones();
-
-        foreach ($contactsPhones as $idContact => $phone) {
-
-            if ($phoneNumber == $phone) {
-                return $idContact;
-            }
-        }
-        return 0;
+        return $this->apiClient->contacts()->get();
     }
 }

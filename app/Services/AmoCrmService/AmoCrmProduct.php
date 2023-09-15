@@ -1,23 +1,25 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Services\AmoCrmService;
 
 use AmoCRM\Collections\CatalogElementsCollection;
-use AmoCRM\Collections\CatalogsCollection;
 use AmoCRM\Collections\LinksCollection;
 use AmoCRM\Exceptions\AmoCRMApiException;
 use AmoCRM\Filters\CatalogElementsFilter;
+use AmoCRM\Models\Customers\CustomerModel;
+use AmoCRM\Models\LeadModel;
 
 class AmoCrmProduct extends AmoCrmOAuth
 {
     public function getProducts(): ?CatalogElementsCollection
     {
-        $catalogsCollection = $this->api_client->catalogs()->get();
+        $catalogsCollection = $this->apiClient->catalogs()->get();
         $catalog = $catalogsCollection->getBy('name', 'Товары');
 
         $catalogElementsCollection = new CatalogElementsCollection();
-        $catalogElementsService = $this->api_client->catalogElements($catalog->getId());
+        $catalogElementsService = $this->apiClient->catalogElements($catalog->getId());
         $catalogElementsFilter = new CatalogElementsFilter();
 
         try {
@@ -29,17 +31,15 @@ class AmoCrmProduct extends AmoCrmOAuth
         return $catalogElementsCollection;
     }
 
-    public function linkProductLead(int $idLead)
+    public function linkProductLead(LeadModel $lead): void
     {
         $catalogElementsCollection = $this->getProducts();
-
-        $lead = (new AmoCrmLead())->getLeadById($idLead);
 
         foreach ($catalogElementsCollection as $catalogElement) {
             $links = new LinksCollection();
             $links->add($catalogElement);
             try {
-                $this->api_client->leads()->link($lead, $links);
+                $this->apiClient->leads()->link($lead, $links);
             } catch (AmoCRMApiException $e) {
                 print_r($e);
                 die;
@@ -47,17 +47,15 @@ class AmoCrmProduct extends AmoCrmOAuth
         }
     }
 
-    public function linkProductCustomer(int $idCustomer)
+    public function linkProductCustomer(CustomerModel $customer): void
     {
         $catalogElementsCollection = $this->getProducts();
-
-        $lead = (new AmoCrmCustomer())->getCustomerById($idCustomer);
 
         foreach ($catalogElementsCollection as $catalogElement) {
             $links = new LinksCollection();
             $links->add($catalogElement);
             try {
-                $this->api_client->customers()->link($lead, $links);
+                $this->apiClient->customers()->link($customer, $links);
             } catch (AmoCRMApiException $e) {
                 print_r($e);
                 die;

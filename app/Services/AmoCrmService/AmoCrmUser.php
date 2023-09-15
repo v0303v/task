@@ -1,16 +1,18 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Services\AmoCrmService;
 
+use AmoCRM\Collections\UsersCollection;
 use AmoCRM\Exceptions\AmoCRMApiException;
 
 class AmoCrmUser extends AmoCrmOAuth
 {
-    public function getUsers()
+    public function getUsers() : ?UsersCollection
     {
         try {
-            return $this->api_client->users()->get();
+            return $this->apiClient->users()->get();
         } catch (AmoCRMApiException $e) {
             print_r($e);
             die;
