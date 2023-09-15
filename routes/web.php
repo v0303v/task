@@ -14,5 +14,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('pages/create_form' );
 });
+
+Route::post('handler', 'App\Services\Handler@run');
+
+Route::get('get_token', 'App\Services\AmoCrmService\AmoCrmOAuth@authToApi');
